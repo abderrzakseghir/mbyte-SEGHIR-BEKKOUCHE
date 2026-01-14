@@ -84,7 +84,7 @@ services:
           - auth.mbyte.fr
 
   manager:
-    image: jerome/manager:25.1-SNAPSHOT
+    image: etudiant/manager:25.1-SNAPSHOT
     hostname: manager
     container_name: mbyte.manager
     depends_on:
@@ -93,7 +93,7 @@ services:
       - keycloak
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:rw
-      - mbyte.stores.volume:/home/jboss
+      - /var/mbyte/stores:/home/jboss
     networks:
       mbyte:
         ipv4_address: 172.25.0.6
@@ -122,13 +122,5 @@ networks:
 volumes:
   mbyte.db.volume:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /var/mbyte/db
   mbyte.stores.volume:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /var/mbyte/stores
