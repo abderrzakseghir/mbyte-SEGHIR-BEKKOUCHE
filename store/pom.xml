@@ -17,6 +17,9 @@
         <version.quinoa>2.4.2</version.quinoa>
         <version.lucene>9.4.1</version.lucene>
         <version.consul-client>1.5.3</version.consul-client>
+        <!-- External Storage Integration -->
+        <version.aws-sdk>2.25.16</version.aws-sdk>
+        <version.sardine>5.12</version.sardine>
     </properties>
 
     <dependencyManagement>
@@ -130,6 +133,25 @@
                 </exclusion>
             </exclusions>
             <version>${version.consul-client}</version>
+        </dependency>
+
+        <!-- AWS SDK for S3/MinIO compatibility -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${version.aws-sdk}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>apache-client</artifactId>
+            <version>${version.aws-sdk}</version>
+        </dependency>
+
+        <!-- Sardine for WebDAV support -->
+        <dependency>
+            <groupId>com.github.lookfirst</groupId>
+            <artifactId>sardine</artifactId>
+            <version>${version.sardine}</version>
         </dependency>
 
         <dependency>

@@ -71,7 +71,7 @@ public class CoreServiceBean implements CoreService {
         LOGGER.log(Level.INFO, "Getting store for connected user");
         String owner = authenticationService.getConnectedProfile().getUsername();
         Store store = findByOwner(owner);
-        String location = lookup(store.getName());
+        String location = lookup(store.getOwner());
         if ( location != null ) {
             LOGGER.log(Level.INFO, "Found store instance at location: " + location);
             store.setLocation(location);

@@ -16,6 +16,9 @@
  */
 package fr.jayblanc.mbyte.store.data;
 
+import fr.jayblanc.mbyte.store.data.backend.StorageBackend;
+import fr.jayblanc.mbyte.store.data.backend.StorageBackendException;
+import fr.jayblanc.mbyte.store.data.backend.StorageService;
 import fr.jayblanc.mbyte.store.data.exception.DataNotFoundException;
 import fr.jayblanc.mbyte.store.data.exception.DataStoreException;
 import fr.jayblanc.mbyte.store.data.hash.HashedFilterInputStream;
@@ -28,8 +31,11 @@ import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.AutoDetectParser;
 import org.apache.tika.sax.BodyContentHandler;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.xml.sax.SAXException;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.*;
@@ -49,6 +55,12 @@ public class DataStoreBean implements DataStore {
     @Inject
     DataStoreConfig config;
 
+    @Inject
+    StorageService storageService;
+
+    @ConfigProperty(name = "mbyte.store.id", defaultValue = "default")
+    String storeId;
+
     private Path base;
     private Tika tika;
 
@@ -65,10 +77,25 @@ public class DataStoreBean implements DataStore {
             LOGGER.log(Level.SEVERE, "unable to initialize data store", e);
         }
         this.tika = new Tika();
+        
+        // Log storage backend info
+        if (storageService != null && storageService.isAvailable()) {
+            LOGGER.log(Level.INFO, "Storage backend: " + storageService.getBackendName());
+        } else {
+            LOGGER.log(Level.INFO, "Storage backend: LOCAL (fallback)");
+        }
+    }
+
+    private boolean useExternalStorage() {
+        return storageService != null && storageService.isAvailable() 
+               && !"LOCAL".equalsIgnoreCase(storageService.getBackendName());
     }
 
     @Override
     public boolean exists(String key) {
+        if (useExternalStorage()) {
+            return storageService.exists(storeId, key);
+        }
         Path file = Paths.get(base.toString(), key);
         return Files.exists(file);
     }
@@ -76,16 +103,52 @@ public class DataStoreBean implements DataStore {
     @Override
     public String put(InputStream is) throws DataStoreException {
         String tmpkey = UUID.randomUUID().toString();
-        Path tmpfile = Paths.get(base.toString(), tmpkey);
-        try (HashedFilterInputStream his = HashedFilterInputStream.SHA256(is)) {
-            Files.copy(his, tmpfile, StandardCopyOption.REPLACE_EXISTING);
-            String key = his.getHash();
-            Path file = Paths.get(base.toString(), key);
-            if ( !Files.exists(file) ) {
-                Files.move(tmpfile, file);
-            } else {
-                Files.delete(tmpfile);
+        
+        try {
+            // Read and hash the content
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = is.read(buffer)) != -1) {
+                baos.write(buffer, 0, bytesRead);
             }
+            byte[] content = baos.toByteArray();
+            
+            // Calculate hash
+            String key;
+            try (HashedFilterInputStream his = HashedFilterInputStream.SHA256(new ByteArrayInputStream(content))) {
+                byte[] hashBuffer = new byte[8192];
+                while (his.read(hashBuffer) != -1) {
+                    // Just read to compute hash
+                }
+                key = his.getHash();
+            }
+            
+            // Check if already exists
+            if (exists(key)) {
+                return key;
+            }
+            
+            // Store based on backend
+            if (useExternalStorage()) {
+                try {
+                    storageService.put(storeId, key, new ByteArrayInputStream(content));
+                    LOGGER.log(Level.INFO, "Stored file to " + storageService.getBackendName() + ": " + key);
+                } catch (StorageBackendException e) {
+                    throw new DataStoreException("Failed to store to external backend", e);
+                }
+            } else {
+                // Local storage (original behavior)
+                Path tmpfile = Paths.get(base.toString(), tmpkey);
+                Files.copy(new ByteArrayInputStream(content), tmpfile, StandardCopyOption.REPLACE_EXISTING);
+                Path file = Paths.get(base.toString(), key);
+                if (!Files.exists(file)) {
+                    Files.move(tmpfile, file);
+                } else {
+                    Files.delete(tmpfile);
+                }
+            }
+            
             return key;
         } catch (IOException | NoSuchAlgorithmException e) {
             throw new DataStoreException("unexpected error during stream copy", e);
@@ -94,8 +157,19 @@ public class DataStoreBean implements DataStore {
 
     @Override
     public InputStream get(String key) throws DataStoreException, DataNotFoundException {
+        if (useExternalStorage()) {
+            try {
+                return storageService.get(storeId, key);
+            } catch (StorageBackendException e) {
+                if (e.getMessage().contains("not found")) {
+                    throw new DataNotFoundException("file not found in storage for key: " + key);
+                }
+                throw new DataStoreException("unexpected error while retrieving from external backend", e);
+            }
+        }
+        
         Path file = Paths.get(base.toString(), key);
-        if ( !Files.exists(file) ) {
+        if (!Files.exists(file)) {
             throw new DataNotFoundException("file not found in storage for key: " + key);
         }
         try {
@@ -106,25 +180,32 @@ public class DataStoreBean implements DataStore {
     }
 
     @Override
-    public String type(String key, String name) throws DataNotFoundException {
+    public String type(String key, String name) throws DataNotFoundException, DataStoreException {
         LOGGER.log(Level.FINE, "Extract type for key: " + key);
-        Path file = Paths.get(base.toString(), key);
-        if ( !Files.exists(file) ) {
-            throw new DataNotFoundException("file not found in storage for key: " + key);
-        }
-        String mimetype = MediaType.APPLICATION_OCTET_STREAM;
-        try (InputStream stream = Files.newInputStream(file)) {
-            mimetype = tika.detect(stream, name);
+        
+        try (InputStream stream = get(key)) {
+            return tika.detect(stream, name);
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Unable to detect mimetype: " + e.getMessage(), e);
+            return MediaType.APPLICATION_OCTET_STREAM;
         }
-        return mimetype;
     }
 
     @Override
     public long size(String key) throws DataStoreException, DataNotFoundException {
+        if (useExternalStorage()) {
+            try {
+                return storageService.size(storeId, key);
+            } catch (StorageBackendException e) {
+                if (e.getMessage().contains("not found")) {
+                    throw new DataNotFoundException("file not found in storage for key: " + key);
+                }
+                throw new DataStoreException("unexpected error while getting size from external backend", e);
+            }
+        }
+        
         Path file = Paths.get(base.toString(), key);
-        if ( !Files.exists(file) ) {
+        if (!Files.exists(file)) {
             throw new DataNotFoundException("file not found in storage for key: " + key);
         }
         try {
@@ -137,11 +218,8 @@ public class DataStoreBean implements DataStore {
     @Override
     public String extract(String key, String name, String type) throws DataStoreException, DataNotFoundException {
         LOGGER.log(Level.FINE, "Extract text for key: " + key);
-        Path file = Paths.get(base.toString(), key);
-        if ( !Files.exists(file) ) {
-            throw new DataNotFoundException("file not found in storage");
-        }
-        try (InputStream stream = Files.newInputStream(file)) {
+        
+        try (InputStream stream = get(key)) {
             BodyContentHandler handler = new BodyContentHandler();
             AutoDetectParser parser = new AutoDetectParser();
             Metadata metadata = new Metadata();
@@ -155,8 +233,20 @@ public class DataStoreBean implements DataStore {
 
     @Override
     public void delete(String key) throws DataStoreException {
-        throw new DataStoreException("NOT IMPLEMENTED");
+        if (useExternalStorage()) {
+            try {
+                storageService.delete(storeId, key);
+                LOGGER.log(Level.INFO, "Deleted file from " + storageService.getBackendName() + ": " + key);
+            } catch (StorageBackendException e) {
+                throw new DataStoreException("Failed to delete from external backend", e);
+            }
+        } else {
+            Path file = Paths.get(base.toString(), key);
+            try {
+                Files.deleteIfExists(file);
+            } catch (IOException e) {
+                throw new DataStoreException("Failed to delete local file", e);
+            }
+        }
     }
-
-
 }

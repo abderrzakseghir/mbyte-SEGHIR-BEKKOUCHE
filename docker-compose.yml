@@ -110,6 +110,39 @@ services:
       - MANAGER.TOPOLOGY.HOST=consul
       - MANAGER.TOPOLOGY.PORT=8500
 
+  # MinIO - S3 Compatible Object Storage
+  minio:
+    image: minio/minio:latest
+    hostname: minio
+    container_name: mbyte.minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - mbyte.minio.volume:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=mbyte"
+      - "traefik.http.routers.minio.rule=Host(`minio.mbyte.fr`)"
+      - "traefik.http.routers.minio.entrypoints=http"
+      - "traefik.http.routers.minio.service=minio-http"
+      - "traefik.http.services.minio-http.loadbalancer.server.port=9000"
+      - "traefik.http.routers.minio-console.rule=Host(`minio-console.mbyte.fr`)"
+      - "traefik.http.routers.minio-console.entrypoints=http"
+      - "traefik.http.routers.minio-console.service=minio-console-http"
+      - "traefik.http.services.minio-console-http.loadbalancer.server.port=9001"
+    depends_on:
+      - traefik
+    networks:
+      mbyte:
+        ipv4_address: 172.25.0.10
+        aliases:
+          - minio.mbyte.fr
+
 networks:
   mbyte:
     name: mbyte.net
@@ -123,4 +156,6 @@ volumes:
   mbyte.db.volume:
     driver: local
   mbyte.stores.volume:
+    driver: local
+  mbyte.minio.volume:
     driver: local
