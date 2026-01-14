@@ -1,4 +1,4 @@
-# 📦 Issue #20 : Intégration de Stockage Externe (S3/MinIO)
+#  Issue #20 : Intégration de Stockage Externe (S3/MinIO)
 
 ## Résumé de l'implémentation
 
@@ -31,7 +31,7 @@ Permettre le stockage des fichiers utilisateurs sur des backends de stockage ext
 
 ## Architecture Avant/Après
 
-### ❌ Avant : Stockage Local
+###  Avant : Stockage Local
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
@@ -46,7 +46,7 @@ Permettre le stockage des fichiers utilisateurs sur des backends de stockage ext
 - Impossible de distribuer
 - Couplage fort au système de fichiers
 
-### ✅ Après : Multi-Backend
+###  Après : Multi-Backend
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐

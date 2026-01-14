@@ -1,4 +1,4 @@
-# 📊 Schémas Mermaid pour le Rapport
+#  Schémas Mermaid pour le Rapport
 
 Ce fichier contient tous les schémas Mermaid prêts à être copiés dans votre rapport.
 
@@ -514,7 +514,7 @@ flowchart LR
 
 ---
 
-## 📋 Comment utiliser ces schémas
+##  Comment utiliser ces schémas
 
 ### Dans GitHub/GitLab
 

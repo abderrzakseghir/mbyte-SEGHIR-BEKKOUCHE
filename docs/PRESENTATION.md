@@ -1,11 +1,11 @@
-# 🎓 MByte - Documentation de Présentation
+#  MByte - Documentation de Présentation
 
 > **Projet de TP - Janvier 2026**  
 > Réalisé par : SEGHIR & BEKKOUCHE
 
 ---
 
-## 📋 Table des matières
+##  Table des matières
 
 1. [Vue d'ensemble du projet](#vue-densemble-du-projet)
 2. [Architecture globale](#architecture-globale)
@@ -19,7 +19,7 @@
 
 ---
 
-## 🌐 Vue d'ensemble du projet
+##  Vue d'ensemble du projet
 
 MByte est une plateforme de stockage de fichiers distribuée permettant à chaque utilisateur de disposer de son propre **store** (espace de stockage). L'architecture est basée sur des microservices avec :
 
@@ -86,7 +86,7 @@ graph TB
 
 ---
 
-## 🏗️ Architecture globale
+##  Architecture globale
 
 ### Architecture 3-tiers avec microservices
 
@@ -151,7 +151,7 @@ sequenceDiagram
 
 ---
 
-## 🛠️ Technologies utilisées
+##  Technologies utilisées
 
 ### Backend
 
@@ -193,7 +193,7 @@ sequenceDiagram
 
 ---
 
-## 🔐 Flow d'authentification
+##  Flow d'authentification
 
 ### OAuth2 / OpenID Connect avec Keycloak
 
@@ -239,7 +239,7 @@ quarkus.oidc.roles.source=accesstoken
 
 ---
 
-## 📁 Flow de stockage de fichiers
+##  Flow de stockage de fichiers
 
 ### Upload de fichier avec MinIO
 
@@ -320,7 +320,7 @@ flowchart TB
 
 ---
 
-## 🐳 Infrastructure Docker
+##  Infrastructure Docker
 
 ### Docker Compose - Services
 
@@ -385,7 +385,7 @@ labels:
 
 ---
 
-## 🔌 Issue #20 - Intégration stockage externe
+##  Issue #20 - Intégration stockage externe
 
 ### Objectif
 
@@ -465,7 +465,7 @@ mbyte.store.backend.s3.path-style-access=true
 
 ---
 
-## 💡 Choix technologiques
+##  Choix technologiques
 
 ### Pourquoi Quarkus ?
 
@@ -571,7 +571,7 @@ flowchart TB
 
 ---
 
-## 📊 Schémas détaillés
+##  Schémas détaillés
 
 ### Cycle de vie d'un store
 
@@ -652,7 +652,7 @@ flowchart TB
 
 ---
 
-## 📝 Résumé
+##  Résumé
 
 ### Points clés de l'architecture
 
