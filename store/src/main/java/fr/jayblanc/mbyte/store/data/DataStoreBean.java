@@ -19,6 +19,8 @@ package fr.jayblanc.mbyte.store.data;
 import fr.jayblanc.mbyte.store.data.backend.StorageBackend;
 import fr.jayblanc.mbyte.store.data.backend.StorageBackendException;
 import fr.jayblanc.mbyte.store.data.backend.StorageService;
+import fr.jayblanc.mbyte.store.data.cipher.CipherException;
+import fr.jayblanc.mbyte.store.data.cipher.CipherService;
 import fr.jayblanc.mbyte.store.data.exception.DataNotFoundException;
 import fr.jayblanc.mbyte.store.data.exception.DataStoreException;
 import fr.jayblanc.mbyte.store.data.hash.HashedFilterInputStream;
@@ -58,6 +60,9 @@ public class DataStoreBean implements DataStore {
     @Inject
     StorageService storageService;
 
+    @Inject
+    CipherService cipherService;
+
     @ConfigProperty(name = "mbyte.store.id", defaultValue = "default")
     String storeId;
 
@@ -84,6 +89,17 @@ public class DataStoreBean implements DataStore {
         } else {
             LOGGER.log(Level.INFO, "Storage backend: LOCAL (fallback)");
         }
+        
+        // Log cipher info
+        if (cipherService != null && cipherService.isEnabled()) {
+            LOGGER.log(Level.INFO, "Encryption enabled: " + cipherService.getAlgorithm());
+        } else {
+            LOGGER.log(Level.INFO, "Encryption: DISABLED");
+        }
+    }
+
+    private boolean useEncryption() {
+        return cipherService != null && cipherService.isEnabled() && useExternalStorage();
     }
 
     private boolean useExternalStorage() {
@@ -132,8 +148,19 @@ public class DataStoreBean implements DataStore {
             // Store based on backend
             if (useExternalStorage()) {
                 try {
-                    storageService.put(storeId, key, new ByteArrayInputStream(content));
-                    LOGGER.log(Level.INFO, "Stored file to " + storageService.getBackendName() + ": " + key);
+                    // Encrypt content if encryption is enabled
+                    byte[] dataToStore = content;
+                    if (useEncryption()) {
+                        try {
+                            dataToStore = cipherService.encrypt(content);
+                            LOGGER.log(Level.FINE, "Encrypted file before storage: " + key);
+                        } catch (CipherException e) {
+                            throw new DataStoreException("Failed to encrypt data", e);
+                        }
+                    }
+                    storageService.put(storeId, key, new ByteArrayInputStream(dataToStore));
+                    LOGGER.log(Level.INFO, "Stored file to " + storageService.getBackendName() + 
+                               (useEncryption() ? " (encrypted)" : "") + ": " + key);
                 } catch (StorageBackendException e) {
                     throw new DataStoreException("Failed to store to external backend", e);
                 }
@@ -159,7 +186,18 @@ public class DataStoreBean implements DataStore {
     public InputStream get(String key) throws DataStoreException, DataNotFoundException {
         if (useExternalStorage()) {
             try {
-                return storageService.get(storeId, key);
+                InputStream encryptedStream = storageService.get(storeId, key);
+                // Decrypt content if encryption is enabled
+                if (useEncryption()) {
+                    try {
+                        InputStream decryptedStream = cipherService.decrypt(encryptedStream);
+                        LOGGER.log(Level.FINE, "Decrypted file from storage: " + key);
+                        return decryptedStream;
+                    } catch (CipherException e) {
+                        throw new DataStoreException("Failed to decrypt data", e);
+                    }
+                }
+                return encryptedStream;
             } catch (StorageBackendException e) {
                 if (e.getMessage().contains("not found")) {
                     throw new DataNotFoundException("file not found in storage for key: " + key);
