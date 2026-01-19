@@ -41,4 +41,57 @@
         </addColumn>
     </changeSet>
 
+    <changeSet id="4" author="abderrazak">
+        <comment>Add storage_settings table for user storage configuration</comment>
+        <createTable tableName="storage_settings">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="owner" type="varchar(250)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <!-- General Settings -->
+            <column name="multi_backend_enabled" type="boolean" defaultValueBoolean="true"/>
+            <column name="redundancy_level" type="int" defaultValueNumeric="2"/>
+            <column name="load_balancing_strategy" type="varchar(50)" defaultValue="ROUND_ROBIN"/>
+            <column name="encryption_enabled" type="boolean" defaultValueBoolean="true"/>
+            <!-- S3/MinIO Settings -->
+            <column name="s3_enabled" type="boolean" defaultValueBoolean="true"/>
+            <column name="s3_endpoint" type="varchar(500)"/>
+            <column name="s3_access_key" type="varchar(500)"/>
+            <column name="s3_secret_key" type="varchar(500)"/>
+            <column name="s3_bucket" type="varchar(250)"/>
+            <column name="s3_region" type="varchar(100)"/>
+            <!-- Google Drive Settings -->
+            <column name="google_drive_enabled" type="boolean" defaultValueBoolean="false"/>
+            <column name="google_drive_client_id" type="varchar(500)"/>
+            <column name="google_drive_client_secret" type="varchar(500)"/>
+            <column name="google_drive_refresh_token" type="varchar(2000)"/>
+            <column name="google_drive_folder_id" type="varchar(250)"/>
+            <!-- Dropbox Settings -->
+            <column name="dropbox_enabled" type="boolean" defaultValueBoolean="false"/>
+            <column name="dropbox_access_token" type="varchar(2000)"/>
+            <column name="dropbox_app_key" type="varchar(250)"/>
+            <column name="dropbox_app_secret" type="varchar(250)"/>
+            <column name="dropbox_root_path" type="varchar(500)"/>
+            <!-- OneDrive Settings -->
+            <column name="onedrive_enabled" type="boolean" defaultValueBoolean="false"/>
+            <column name="onedrive_client_id" type="varchar(500)"/>
+            <column name="onedrive_client_secret" type="varchar(500)"/>
+            <column name="onedrive_tenant_id" type="varchar(250)"/>
+            <column name="onedrive_root_path" type="varchar(500)"/>
+            <!-- WebDAV Settings -->
+            <column name="webdav_enabled" type="boolean" defaultValueBoolean="false"/>
+            <column name="webdav_url" type="varchar(500)"/>
+            <column name="webdav_username" type="varchar(250)"/>
+            <column name="webdav_password" type="varchar(500)"/>
+            <!-- Timestamps -->
+            <column name="created_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+        <createIndex tableName="storage_settings" indexName="idx_storage_settings_owner">
+            <column name="owner"/>
+        </createIndex>
+    </changeSet>
+
 </databaseChangeLog>

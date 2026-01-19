@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="File Store - Storage Settings">
+    <meta name="keywords" content="app, responsive, storage, cloud, settings">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title>File Store - Storage Settings</title>
+
+    <link rel="stylesheet" href="/vendor/@fortawesome/fontawesome-free-webfonts/css/fa-brands.css">
+    <link rel="stylesheet" href="/vendor/@fortawesome/fontawesome-free-webfonts/css/fa-regular.css">
+    <link rel="stylesheet" href="/vendor/@fortawesome/fontawesome-free-webfonts/css/fa-solid.css">
+    <link rel="stylesheet" href="/vendor/@fortawesome/fontawesome-free-webfonts/css/fontawesome.css">
+    <link rel="stylesheet" href="/vendor/simple-line-icons/css/simple-line-icons.css">
+    <link rel="stylesheet" href="/vendor/animate.css/animate.css">
+    <link rel="stylesheet" href="/vendor/whirl/dist/whirl.css">
+    <link rel="stylesheet" href="/css/bootstrap.css" id="bscss">
+    <link rel="stylesheet" href="/css/app.css" id="maincss">
+    <style>
+        .backend-card {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        .backend-card.enabled {
+            border-color: #28a745;
+        }
+        .backend-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .backend-logo {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 10px;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 30px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+        input:checked + .toggle-slider {
+            background-color: #28a745;
+        }
+        input:checked + .toggle-slider:before {
+            transform: translateX(30px);
+        }
+        .credential-input {
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+        .help-link {
+            font-size: 0.8rem;
+        }
+        .status-badge {
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+
+<body>
+<div class="wrapper">
+    <header class="topnavbar-wrapper">
+        <nav class="navbar topnavbar">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="#/">
+                    <div class="brand-logo">
+                        <img class="img-fluid" src="/img/logo.png" alt="FileStore Logo">
+                    </div>
+                    <div class="brand-logo-collapsed">
+                        <img class="img-fluid" src="/img/logo-single.png" alt="FileStore Logo">
+                    </div>
+                </a>
+            </div>
+            <ul class="navbar-nav mr-auto flex-row">
+                <li class="nav-item">
+                    <a class="nav-link d-none d-md-block d-lg-block d-xl-block" href="#" data-trigger-resize="" data-toggle-state="aside-collapsed">
+                        <em class="fas fa-bars"></em>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </header>
+    
+    {#include common$menu profile=profile section='settings' /}
+    
+    <section class="section-container">
+        <div class="content-wrapper">
+            <div class="content-heading">
+                <div>
+                    <em class="fas fa-cog mr-2"></em> Paramètres de Stockage
+                    <small class="text-muted">Configurez vos backends de stockage externes</small>
+                </div>
+            </div>
+
+            {#if io:vertx.core.MultiMap:from(request.queryParameters).contains("success")}
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <em class="fas fa-check-circle mr-2"></em>
+                Paramètres sauvegardés avec succès !
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            {/if}
+
+            <!-- General Settings -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <em class="fas fa-sliders-h mr-2"></em> Paramètres Généraux
+                </div>
+                <div class="card-body">
+                    <form action="/api/settings/general" method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="d-flex align-items-center">
+                                        <label class="toggle-switch mr-2 mb-0">
+                                            <input type="checkbox" name="multiBackendEnabled" value="true" {#if settings.multiBackendEnabled}checked{/if}>
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                        <strong>Multi-Backend (Redondance)</strong>
+                                    </label>
+                                    <small class="form-text text-muted">
+                                        Stocker vos fichiers sur plusieurs backends pour plus de sécurité
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="d-flex align-items-center">
+                                        <label class="toggle-switch mr-2 mb-0">
+                                            <input type="checkbox" name="encryptionEnabled" value="true" {#if settings.encryptionEnabled}checked{/if}>
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                        <strong>Chiffrement AES-256</strong>
+                                    </label>
+                                    <small class="form-text text-muted">
+                                        Chiffrer les fichiers avant le stockage externe
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="redundancyLevel">Niveau de Redondance</label>
+                                    <select class="form-control" id="redundancyLevel" name="redundancyLevel">
+                                        <option value="1" {#if settings.redundancyLevel == 1}selected{/if}>1 - Pas de redondance</option>
+                                        <option value="2" {#if settings.redundancyLevel == 2}selected{/if}>2 - Double copie</option>
+                                        <option value="3" {#if settings.redundancyLevel == 3}selected{/if}>3 - Triple copie</option>
+                                    </select>
+                                    <small class="form-text text-muted">Nombre de backends où chaque fichier sera stocké</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="loadBalancingStrategy">Stratégie de Load Balancing</label>
+                                    <select class="form-control" id="loadBalancingStrategy" name="loadBalancingStrategy">
+                                        <option value="ROUND_ROBIN" {#if settings.loadBalancingStrategy == 'ROUND_ROBIN'}selected{/if}>Round Robin</option>
+                                        <option value="RANDOM" {#if settings.loadBalancingStrategy == 'RANDOM'}selected{/if}>Aléatoire</option>
+                                        <option value="FASTEST" {#if settings.loadBalancingStrategy == 'FASTEST'}selected{/if}>Plus rapide</option>
+                                        <option value="PRIMARY_FIRST" {#if settings.loadBalancingStrategy == 'PRIMARY_FIRST'}selected{/if}>Primaire d'abord</option>
+                                    </select>
+                                    <small class="form-text text-muted">Comment distribuer les lectures entre backends</small>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <em class="fas fa-save mr-1"></em> Sauvegarder
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Storage Backends -->
+            <h4 class="mb-3"><em class="fas fa-cloud mr-2"></em> Backends de Stockage</h4>
+            <p class="text-muted mb-4">
+                Activez et configurez les services de stockage cloud que vous souhaitez utiliser.
+                Vos fichiers seront répartis automatiquement selon vos paramètres de redondance.
+            </p>
+
+            <div class="row">
+                <!-- S3/MinIO Card -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card backend-card h-100 {#if settings.s3Enabled}enabled{/if}">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <em class="fab fa-aws fa-2x text-warning"></em>
+                                <strong class="ml-2">S3 / MinIO</strong>
+                            </div>
+                            <span class="badge {#if settings.s3Enabled}badge-success{#else}badge-secondary{/if} status-badge">
+                                {#if settings.s3Enabled}Actif{#else}Inactif{/if}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <form action="/api/settings/backend/s3" method="POST">
+                                <div class="form-group">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" name="enabled" value="true" {#if settings.s3Enabled}checked{/if}>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <span class="ml-2">Activer S3/MinIO</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>Endpoint</label>
+                                    <input type="url" class="form-control credential-input" name="endpoint" 
+                                           value="{settings.s3Endpoint}" placeholder="http://minio:9000">
+                                </div>
+                                <div class="form-group">
+                                    <label>Access Key</label>
+                                    <input type="text" class="form-control credential-input" name="accessKey" 
+                                           value="{settings.s3AccessKey}" placeholder="minioadmin">
+                                </div>
+                                <div class="form-group">
+                                    <label>Secret Key</label>
+                                    <input type="password" class="form-control credential-input" name="secretKey" 
+                                           value="{settings.s3SecretKey}" placeholder="••••••••">
+                                </div>
+                                <div class="form-group">
+                                    <label>Bucket</label>
+                                    <input type="text" class="form-control credential-input" name="bucket" 
+                                           value="{settings.s3Bucket}" placeholder="mbyte-stores">
+                                </div>
+                                <div class="form-group">
+                                    <label>Region</label>
+                                    <input type="text" class="form-control credential-input" name="region" 
+                                           value="{settings.s3Region}" placeholder="us-east-1">
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-block">
+                                    <em class="fas fa-save mr-1"></em> Sauvegarder
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Google Drive Card -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card backend-card h-100 {#if settings.googleDriveEnabled}enabled{/if}">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <em class="fab fa-google-drive fa-2x text-success"></em>
+                                <strong class="ml-2">Google Drive</strong>
+                            </div>
+                            <span class="badge {#if settings.googleDriveEnabled}badge-success{#else}badge-secondary{/if} status-badge">
+                                {#if settings.googleDriveEnabled}Actif{#else}Inactif{/if}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <form action="/api/settings/backend/googledrive" method="POST">
+                                <div class="form-group">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" name="enabled" value="true" {#if settings.googleDriveEnabled}checked{/if}>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <span class="ml-2">Activer Google Drive</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>Client ID</label>
+                                    <input type="text" class="form-control credential-input" name="clientId" 
+                                           value="{settings.googleDriveClientId}" placeholder="xxx.apps.googleusercontent.com">
+                                </div>
+                                <div class="form-group">
+                                    <label>Client Secret</label>
+                                    <input type="password" class="form-control credential-input" name="clientSecret" 
+                                           value="{settings.googleDriveClientSecret}" placeholder="••••••••">
+                                </div>
+                                <div class="form-group">
+                                    <label>Refresh Token</label>
+                                    <input type="password" class="form-control credential-input" name="refreshToken" 
+                                           value="{settings.googleDriveRefreshToken}" placeholder="••••••••">
+                                    <small class="form-text text-muted help-link">
+                                        <a href="https://developers.google.com/oauthplayground/" target="_blank">
+                                            <em class="fas fa-external-link-alt"></em> Obtenir un token
+                                        </a>
+                                    </small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Folder ID (optionnel)</label>
+                                    <input type="text" class="form-control credential-input" name="folderId" 
+                                           value="{settings.googleDriveFolderId}" placeholder="root">
+                                </div>
+                                <button type="submit" class="btn btn-success btn-block">
+                                    <em class="fas fa-save mr-1"></em> Sauvegarder
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dropbox Card -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card backend-card h-100 {#if settings.dropboxEnabled}enabled{/if}">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <em class="fab fa-dropbox fa-2x text-primary"></em>
+                                <strong class="ml-2">Dropbox</strong>
+                            </div>
+                            <span class="badge {#if settings.dropboxEnabled}badge-success{#else}badge-secondary{/if} status-badge">
+                                {#if settings.dropboxEnabled}Actif{#else}Inactif{/if}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <form action="/api/settings/backend/dropbox" method="POST">
+                                <div class="form-group">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" name="enabled" value="true" {#if settings.dropboxEnabled}checked{/if}>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <span class="ml-2">Activer Dropbox</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>Access Token</label>
+                                    <input type="password" class="form-control credential-input" name="accessToken" 
+                                           value="{settings.dropboxAccessToken}" placeholder="sl.••••••••">
+                                    <small class="form-text text-muted help-link">
+                                        <a href="https://www.dropbox.com/developers/apps" target="_blank">
+                                            <em class="fas fa-external-link-alt"></em> Créer une app Dropbox
+                                        </a>
+                                    </small>
+                                </div>
+                                <div class="form-group">
+                                    <label>App Key (optionnel)</label>
+                                    <input type="text" class="form-control credential-input" name="appKey" 
+                                           value="{settings.dropboxAppKey}" placeholder="Pour refresh token">
+                                </div>
+                                <div class="form-group">
+                                    <label>App Secret (optionnel)</label>
+                                    <input type="password" class="form-control credential-input" name="appSecret" 
+                                           value="{settings.dropboxAppSecret}" placeholder="••••••••">
+                                </div>
+                                <div class="form-group">
+                                    <label>Root Path</label>
+                                    <input type="text" class="form-control credential-input" name="rootPath" 
+                                           value="{settings.dropboxRootPath}" placeholder="/mbyte-store">
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-block">
+                                    <em class="fas fa-save mr-1"></em> Sauvegarder
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OneDrive Card -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card backend-card h-100 {#if settings.oneDriveEnabled}enabled{/if}">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <em class="fab fa-microsoft fa-2x text-info"></em>
+                                <strong class="ml-2">OneDrive</strong>
+                            </div>
+                            <span class="badge {#if settings.oneDriveEnabled}badge-success{#else}badge-secondary{/if} status-badge">
+                                {#if settings.oneDriveEnabled}Actif{#else}Inactif{/if}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <form action="/api/settings/backend/onedrive" method="POST">
+                                <div class="form-group">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" name="enabled" value="true" {#if settings.oneDriveEnabled}checked{/if}>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <span class="ml-2">Activer OneDrive</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>Client ID (Azure)</label>
+                                    <input type="text" class="form-control credential-input" name="clientId" 
+                                           value="{settings.oneDriveClientId}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+                                    <small class="form-text text-muted help-link">
+                                        <a href="https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank">
+                                            <em class="fas fa-external-link-alt"></em> Azure App Registration
+                                        </a>
+                                    </small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Client Secret</label>
+                                    <input type="password" class="form-control credential-input" name="clientSecret" 
+                                           value="{settings.oneDriveClientSecret}" placeholder="••••••••">
+                                </div>
+                                <div class="form-group">
+                                    <label>Tenant ID</label>
+                                    <input type="text" class="form-control credential-input" name="tenantId" 
+                                           value="{settings.oneDriveTenantId}" placeholder="common">
+                                </div>
+                                <div class="form-group">
+                                    <label>Root Path</label>
+                                    <input type="text" class="form-control credential-input" name="rootPath" 
+                                           value="{settings.oneDriveRootPath}" placeholder="/mbyte-store">
+                                </div>
+                                <button type="submit" class="btn btn-info btn-block">
+                                    <em class="fas fa-save mr-1"></em> Sauvegarder
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- WebDAV Card -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card backend-card h-100 {#if settings.webdavEnabled}enabled{/if}">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <em class="fas fa-server fa-2x text-secondary"></em>
+                                <strong class="ml-2">WebDAV</strong>
+                            </div>
+                            <span class="badge {#if settings.webdavEnabled}badge-success{#else}badge-secondary{/if} status-badge">
+                                {#if settings.webdavEnabled}Actif{#else}Inactif{/if}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <form action="/api/settings/backend/webdav" method="POST">
+                                <div class="form-group">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" name="enabled" value="true" {#if settings.webdavEnabled}checked{/if}>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <span class="ml-2">Activer WebDAV</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>URL du serveur</label>
+                                    <input type="url" class="form-control credential-input" name="url" 
+                                           value="{settings.webdavUrl}" placeholder="https://webdav.example.com/mbyte">
+                                </div>
+                                <div class="form-group">
+                                    <label>Nom d'utilisateur</label>
+                                    <input type="text" class="form-control credential-input" name="username" 
+                                           value="{settings.webdavUsername}" placeholder="user">
+                                </div>
+                                <div class="form-group">
+                                    <label>Mot de passe</label>
+                                    <input type="password" class="form-control credential-input" name="password" 
+                                           value="{settings.webdavPassword}" placeholder="••••••••">
+                                </div>
+                                <button type="submit" class="btn btn-secondary btn-block">
+                                    <em class="fas fa-save mr-1"></em> Sauvegarder
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Local Storage Card (Always enabled) -->
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card backend-card h-100 enabled">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <em class="fas fa-hdd fa-2x text-dark"></em>
+                                <strong class="ml-2">Stockage Local</strong>
+                            </div>
+                            <span class="badge badge-success status-badge">Toujours Actif</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">
+                                Le stockage local est toujours activé comme fallback.
+                                Vos fichiers sont également stockés localement pour garantir
+                                leur disponibilité même si les services cloud sont indisponibles.
+                            </p>
+                            <div class="alert alert-info mb-0">
+                                <em class="fas fa-info-circle mr-1"></em>
+                                <strong>{settings.enabledBackendCount}</strong> backend(s) actif(s)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary -->
+            <div class="card mt-4">
+                <div class="card-header bg-dark text-white">
+                    <em class="fas fa-chart-pie mr-2"></em> Résumé de la Configuration
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h5>Backends Actifs</h5>
+                            <p class="h3 text-primary">{settings.enabledBackendCount}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h5>Niveau de Redondance</h5>
+                            <p class="h3 text-success">{settings.redundancyLevel}x</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h5>Chiffrement</h5>
+                            <p class="h3 {#if settings.encryptionEnabled}text-success{#else}text-warning{/if}">
+                                {#if settings.encryptionEnabled}
+                                <em class="fas fa-lock"></em> Activé
+                                {#else}
+                                <em class="fas fa-unlock"></em> Désactivé
+                                {/if}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+</div>
+
+<script src="/vendor/jquery/dist/jquery.js"></script>
+<script src="/vendor/popper.js/dist/umd/popper.js"></script>
+<script src="/vendor/bootstrap/dist/js/bootstrap.js"></script>
+<script src="/vendor/js-storage/js.storage.js"></script>
+<script src="/vendor/jquery.easing/jquery.easing.js"></script>
+<script src="/vendor/animo/animo.js"></script>
+<script src="/vendor/screenfull/dist/screenfull.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

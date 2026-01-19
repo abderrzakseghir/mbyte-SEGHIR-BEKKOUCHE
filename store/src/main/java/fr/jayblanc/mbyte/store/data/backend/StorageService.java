@@ -20,7 +20,11 @@
  */
 package fr.jayblanc.mbyte.store.data.backend;
 
+import fr.jayblanc.mbyte.store.data.backend.dropbox.DropboxStorageBackend;
+import fr.jayblanc.mbyte.store.data.backend.googledrive.GoogleDriveStorageBackend;
 import fr.jayblanc.mbyte.store.data.backend.local.LocalStorageBackend;
+import fr.jayblanc.mbyte.store.data.backend.multi.MultiBackendStorageBackend;
+import fr.jayblanc.mbyte.store.data.backend.onedrive.OneDriveStorageBackend;
 import fr.jayblanc.mbyte.store.data.backend.s3.S3StorageBackend;
 import fr.jayblanc.mbyte.store.data.backend.webdav.WebDAVStorageBackend;
 import jakarta.annotation.PostConstruct;
@@ -34,7 +38,7 @@ import java.util.Optional;
 
 /**
  * Storage service that delegates to the configured storage backend.
- * Supports LOCAL, S3, and WebDAV backends.
+ * Supports LOCAL, S3, WebDAV, Google Drive, Dropbox, OneDrive, and MULTI backends.
  * 
  * @author MByte Team
  */
@@ -54,6 +58,18 @@ public class StorageService {
 
     @Inject
     WebDAVStorageBackend webdavBackend;
+
+    @Inject
+    GoogleDriveStorageBackend googleDriveBackend;
+
+    @Inject
+    DropboxStorageBackend dropboxBackend;
+
+    @Inject
+    OneDriveStorageBackend oneDriveBackend;
+
+    @Inject
+    MultiBackendStorageBackend multiBackend;
 
     private StorageBackend activeBackend;
 
@@ -87,6 +103,38 @@ public class StorageService {
                     activeBackend = webdavBackend;
                 } else {
                     LOG.warn("WebDAV backend not available, falling back to LOCAL");
+                    activeBackend = localBackend;
+                }
+                break;
+            case GOOGLE_DRIVE:
+                if (googleDriveBackend.isAvailable()) {
+                    activeBackend = googleDriveBackend;
+                } else {
+                    LOG.warn("Google Drive backend not available, falling back to LOCAL");
+                    activeBackend = localBackend;
+                }
+                break;
+            case DROPBOX:
+                if (dropboxBackend.isAvailable()) {
+                    activeBackend = dropboxBackend;
+                } else {
+                    LOG.warn("Dropbox backend not available, falling back to LOCAL");
+                    activeBackend = localBackend;
+                }
+                break;
+            case ONEDRIVE:
+                if (oneDriveBackend.isAvailable()) {
+                    activeBackend = oneDriveBackend;
+                } else {
+                    LOG.warn("OneDrive backend not available, falling back to LOCAL");
+                    activeBackend = localBackend;
+                }
+                break;
+            case MULTI:
+                if (multiBackend.isAvailable()) {
+                    activeBackend = multiBackend;
+                } else {
+                    LOG.warn("Multi-backend not available, falling back to LOCAL");
                     activeBackend = localBackend;
                 }
                 break;
@@ -188,14 +236,5 @@ public class StorageService {
     private String buildKey(String storeId, String path) {
         String normalizedPath = path.startsWith("/") ? path.substring(1) : path;
         return storeId + "/" + normalizedPath;
-    }
-
-    /**
-     * Enum for supported storage backend types.
-     */
-    public enum StorageBackendType {
-        LOCAL,
-        S3,
-        WEBDAV
     }
 }

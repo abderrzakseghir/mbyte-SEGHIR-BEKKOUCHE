@@ -37,6 +37,26 @@ public enum StorageBackendType {
     /**
      * WebDAV storage
      */
-    WEBDAV
+    WEBDAV,
+    
+    /**
+     * Google Drive storage
+     */
+    GOOGLE_DRIVE,
+    
+    /**
+     * Dropbox storage
+     */
+    DROPBOX,
+    
+    /**
+     * Microsoft OneDrive storage
+     */
+    ONEDRIVE,
+    
+    /**
+     * Multi-backend mode (redundancy across multiple backends)
+     */
+    MULTI
 
 }

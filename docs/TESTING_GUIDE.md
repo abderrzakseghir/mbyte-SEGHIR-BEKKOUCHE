@@ -1,6 +1,6 @@
 #  Guide de Test - Issue #20 : Intégration Stockage Externe
 
-Ce guide explique comment tester l'implémentation de l'Issue #20 qui permet le stockage des fichiers sur des backends externes (S3/MinIO, WebDAV) avec chiffrement optionnel.
+Ce guide explique comment tester l'implémentation de l'Issue #20 qui permet le stockage des fichiers sur des backends externes (S3/MinIO, WebDAV, Google Drive, Dropbox, OneDrive) avec chiffrement optionnel, redondance multi-backend et load balancing.
 
 ---
 
@@ -8,10 +8,13 @@ Ce guide explique comment tester l'implémentation de l'Issue #20 qui permet le 
 
 1. [Prérequis](#prérequis)
 2. [Démarrage rapide](#démarrage-rapide)
-3. [Configuration](#configuration)
+3. [Configuration des backends](#configuration-des-backends)
 4. [Tests fonctionnels](#tests-fonctionnels)
 5. [Vérification du chiffrement](#vérification-du-chiffrement)
-6. [Troubleshooting](#troubleshooting)
+6. [Mode Multi-Backend (Redondance)](#mode-multi-backend-redondance)
+7. [Load Balancing](#load-balancing)
+8. [Placement automatique des fichiers](#placement-automatique-des-fichiers)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -60,7 +63,7 @@ Services attendus :
 
 ---
 
-##  Configuration
+##  Configuration des backends
 
 ### Configuration du backend de stockage
 
@@ -69,7 +72,7 @@ Fichier : `store/src/main/resources/application.properties`
 #### Mode S3/MinIO (recommandé pour test)
 
 ```properties
-# Type de backend : LOCAL, S3, WEBDAV
+# Type de backend : LOCAL, S3, WEBDAV, GOOGLE_DRIVE, DROPBOX, ONEDRIVE, MULTI
 mbyte.store.backend.type=S3
 
 # Configuration S3/MinIO
@@ -98,6 +101,58 @@ mbyte.store.backend.webdav.url=https://webdav.example.com/mbyte
 mbyte.store.backend.webdav.username=user
 mbyte.store.backend.webdav.password=secret
 ```
+
+#### Mode Google Drive
+
+```properties
+mbyte.store.backend.type=GOOGLE_DRIVE
+mbyte.store.backend.googledrive.enabled=true
+mbyte.store.backend.googledrive.client-id=YOUR_GOOGLE_CLIENT_ID
+mbyte.store.backend.googledrive.client-secret=YOUR_GOOGLE_CLIENT_SECRET
+mbyte.store.backend.googledrive.refresh-token=YOUR_REFRESH_TOKEN
+mbyte.store.backend.googledrive.application-name=MByte-Store
+# Optionnel: ID du dossier racine (sinon utilise "My Drive")
+mbyte.store.backend.googledrive.root-folder-id=root
+```
+
+Pour obtenir les credentials Google:
+1. Créer un projet sur [Google Cloud Console](https://console.cloud.google.com/)
+2. Activer l'API Google Drive
+3. Créer des identifiants OAuth 2.0
+4. Utiliser l'OAuth Playground pour obtenir un refresh token
+
+#### Mode Dropbox
+
+```properties
+mbyte.store.backend.type=DROPBOX
+mbyte.store.backend.dropbox.enabled=true
+mbyte.store.backend.dropbox.access-token=YOUR_DROPBOX_ACCESS_TOKEN
+# OU utiliser refresh token pour accès long terme:
+mbyte.store.backend.dropbox.app-key=YOUR_APP_KEY
+mbyte.store.backend.dropbox.app-secret=YOUR_APP_SECRET
+mbyte.store.backend.dropbox.refresh-token=YOUR_REFRESH_TOKEN
+mbyte.store.backend.dropbox.root-path=/mbyte-store
+```
+
+Pour obtenir les credentials Dropbox:
+1. Créer une app sur [Dropbox App Console](https://www.dropbox.com/developers/apps)
+2. Générer un access token ou configurer OAuth
+
+#### Mode OneDrive
+
+```properties
+mbyte.store.backend.type=ONEDRIVE
+mbyte.store.backend.onedrive.enabled=true
+mbyte.store.backend.onedrive.client-id=YOUR_AZURE_CLIENT_ID
+mbyte.store.backend.onedrive.client-secret=YOUR_AZURE_CLIENT_SECRET
+mbyte.store.backend.onedrive.tenant-id=YOUR_TENANT_ID
+mbyte.store.backend.onedrive.root-path=/mbyte-store
+```
+
+Pour obtenir les credentials OneDrive:
+1. Enregistrer une application sur [Azure Portal](https://portal.azure.com/)
+2. Configurer les permissions Microsoft Graph (Files.ReadWrite.All)
+3. Créer un secret client
 
 ### Configuration du chiffrement
 
@@ -280,6 +335,12 @@ mbyte.store.cipher.secret-key=YOUR_BASE64_ENCODED_32_BYTE_KEY_HERE
 | S3 Storage Backend | ✅ | Stockage compatible AWS S3 et MinIO |
 | WebDAV Storage Backend | ✅ | Stockage sur serveur WebDAV |
 | Local Storage Backend | ✅ | Stockage sur système de fichiers local |
+| Google Drive Backend | ✅ | Stockage sur Google Drive via API |
+| Dropbox Backend | ✅ | Stockage sur Dropbox via API |
+| OneDrive Backend | ✅ | Stockage sur Microsoft OneDrive via Graph API |
+| Multi-Backend (Redondance) | ✅ | Stockage sur plusieurs backends simultanément |
+| Load Balancing | ✅ | Distribution des lectures entre backends |
+| Placement automatique | ✅ | Routage intelligent selon taille/type de fichier |
 | Sélection automatique du backend | ✅ | Via configuration |
 | Fallback vers local | ✅ | Si backend externe indisponible |
 | Chiffrement AES-256-GCM | ✅ | Encryption avant stockage externe |
@@ -288,5 +349,218 @@ mbyte.store.cipher.secret-key=YOUR_BASE64_ENCODED_32_BYTE_KEY_HERE
 
 ---
 
+##  Mode Multi-Backend (Redondance)
 
+Le mode multi-backend permet de stocker les fichiers sur plusieurs backends simultanément pour assurer la redondance.
 
+### Configuration
+
+```properties
+# Activer le mode multi-backend
+mbyte.store.backend.type=MULTI
+mbyte.store.backend.multi.enabled=true
+
+# Backends à utiliser (dans l'ordre de priorité)
+mbyte.store.backend.multi.backends=S3,GOOGLE_DRIVE,LOCAL
+
+# Niveau de redondance (nombre de copies)
+mbyte.store.backend.multi.redundancy-level=2
+
+# Minimum de writes requis pour considérer l'opération réussie
+mbyte.store.backend.multi.minimum-writes=1
+
+# Échouer si le niveau de redondance n'est pas atteint
+mbyte.store.backend.multi.fail-on-partial-write=false
+```
+
+### Comportement
+
+1. **Écriture** : Le fichier est écrit sur N backends (selon `redundancy-level`)
+2. **Lecture** : Le fichier est lu depuis un backend (selon la stratégie de load balancing)
+3. **Suppression** : Le fichier est supprimé de tous les backends où il existe
+
+### Test de la redondance
+
+```bash
+# Vérifier les logs pour voir la réplication
+docker logs mbyte.store 2>&1 | grep -i "redundancy"
+
+# Résultat attendu:
+# Stored file with 2-way redundancy: abc123 -> [S3, LOCAL]
+```
+
+---
+
+##  Load Balancing
+
+Le load balancing permet de distribuer les lectures entre les backends disponibles.
+
+### Stratégies disponibles
+
+| Stratégie | Description |
+|-----------|-------------|
+| `ROUND_ROBIN` | Distribution circulaire entre backends |
+| `RANDOM` | Sélection aléatoire |
+| `FASTEST` | Utilise le backend avec la meilleure latence |
+| `PRIMARY_FIRST` | Essaie toujours le premier backend, fallback sur les autres |
+
+### Configuration
+
+```properties
+mbyte.store.backend.multi.load-balancing-strategy=ROUND_ROBIN
+
+# Intervalle de vérification de santé (secondes)
+mbyte.store.backend.multi.health-check-interval=60
+```
+
+### Test du load balancing
+
+```bash
+# Faire plusieurs requêtes de lecture
+for i in {1..5}; do
+  curl -s http://store.mbyte.fr/api/files/test.txt > /dev/null
+done
+
+# Vérifier les logs pour voir la distribution
+docker logs mbyte.store 2>&1 | grep -i "Read from"
+
+# Résultat avec ROUND_ROBIN:
+# Read from S3 in 45ms: test.txt
+# Read from LOCAL in 12ms: test.txt
+# Read from S3 in 38ms: test.txt
+# ...
+```
+
+---
+
+##  Placement automatique des fichiers
+
+Le placement automatique permet de router les fichiers vers différents backends selon leurs caractéristiques.
+
+### Configuration
+
+```properties
+# Activer le placement automatique
+mbyte.store.backend.multi.auto-placement-enabled=true
+
+# Seuil pour les gros fichiers (10 MB)
+mbyte.store.backend.multi.large-file-threshold=10485760
+
+# Backend préféré pour les gros fichiers
+mbyte.store.backend.multi.large-file-backend=S3
+
+# Backend pour les fichiers fréquemment accédés (hot storage)
+mbyte.store.backend.multi.hot-storage-backend=LOCAL
+
+# Backend pour les fichiers rarement accédés (cold storage)
+mbyte.store.backend.multi.cold-storage-backend=GOOGLE_DRIVE
+```
+
+### Règles de placement
+
+1. **Gros fichiers** (> threshold) → `large-file-backend` (ex: S3)
+2. **Fichiers fréquents** → `hot-storage-backend` (ex: LOCAL pour accès rapide)
+3. **Archives/backups** → `cold-storage-backend` (ex: Google Drive pour coût réduit)
+
+---
+
+##  Interface utilisateur de paramétrage
+
+MByte offre une interface web permettant aux utilisateurs de configurer facilement leurs backends de stockage externes sans avoir besoin de modifier les fichiers de configuration.
+
+### Accéder aux paramètres
+
+1. **Se connecter** à votre store (ex: http://abderrazak.store.mbyte.fr)
+2. **Cliquer sur "Paramètres"** dans le menu latéral gauche
+3. La page des paramètres de stockage s'affiche
+
+### Fonctionnalités de l'interface
+
+#### Paramètres généraux
+
+| Option | Description | Valeur par défaut |
+|--------|-------------|-------------------|
+| Multi-Backend | Active la redondance sur plusieurs backends | ✅ Activé |
+| Chiffrement AES-256 | Chiffre les fichiers avant stockage | ✅ Activé |
+| Niveau de redondance | Nombre de copies (1-3) | 2 |
+| Stratégie de load balancing | ROUND_ROBIN, RANDOM, FASTEST, PRIMARY_FIRST | ROUND_ROBIN |
+
+#### Configuration des backends
+
+Chaque backend dispose d'un formulaire dédié avec :
+- **Toggle d'activation** : Activer/désactiver le backend
+- **Champs de credentials** : Clés d'API, tokens, etc.
+- **Bouton de sauvegarde** : Enregistre la configuration
+
+##### S3/MinIO
+- Endpoint (URL du serveur)
+- Access Key / Secret Key
+- Bucket
+- Region
+
+##### Google Drive
+- Client ID / Client Secret
+- Refresh Token
+- Folder ID (optionnel)
+
+##### Dropbox
+- Access Token
+- App Key / App Secret (optionnel)
+- Root Path
+
+##### OneDrive
+- Client ID (Azure)
+- Client Secret
+- Tenant ID
+- Root Path
+
+##### WebDAV
+- URL du serveur
+- Nom d'utilisateur / Mot de passe
+
+### API REST pour les paramètres
+
+L'interface utilise une API REST pour gérer les paramètres :
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/api/settings` | Récupère les paramètres (HTML ou JSON) |
+| POST | `/api/settings/general` | Met à jour les paramètres généraux |
+| POST | `/api/settings/backend/s3` | Configure S3/MinIO |
+| POST | `/api/settings/backend/googledrive` | Configure Google Drive |
+| POST | `/api/settings/backend/dropbox` | Configure Dropbox |
+| POST | `/api/settings/backend/onedrive` | Configure OneDrive |
+| POST | `/api/settings/backend/webdav` | Configure WebDAV |
+| POST | `/api/settings/toggle/{backend}` | Toggle on/off (AJAX) |
+
+### Test de l'interface
+
+1. **Aller sur la page des paramètres** :
+   ```
+   http://abderrazak.store.mbyte.fr/api/settings
+   ```
+
+2. **Activer un backend** (ex: Google Drive) :
+   - Activer le toggle
+   - Remplir les credentials
+   - Cliquer sur "Sauvegarder"
+
+3. **Vérifier la configuration** :
+   - Le résumé en bas de page affiche le nombre de backends actifs
+   - Le badge passe de "Inactif" à "Actif"
+
+4. **Tester via l'API** :
+   ```bash
+   curl -s http://abderrazak.store.mbyte.fr/api/settings \
+     -H "Accept: application/json" \
+     -H "Authorization: Bearer YOUR_TOKEN" | jq
+   ```
+
+### Sécurité des credentials
+
+- Les mots de passe et secrets sont affichés en mode "password" (masqués)
+- Les credentials sont stockés dans la base de données du store
+- Chaque utilisateur a ses propres paramètres (isolation par owner)
+- ⚠️ **Recommandation** : Utiliser des tokens avec permissions limitées
+
+---
