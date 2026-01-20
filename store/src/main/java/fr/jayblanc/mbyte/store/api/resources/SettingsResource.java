@@ -57,14 +57,15 @@ public class SettingsResource {
      */
     @GET
     @Produces(MediaType.TEXT_HTML)
-    public TemplateInstance getSettingsPage() {
-        LOGGER.log(Level.INFO, "GET /api/settings (html)");
+    public TemplateInstance getSettingsPage(@QueryParam("success") String success) {
+        LOGGER.log(Level.INFO, "GET /api/settings (html), success=" + success);
         String owner = auth.getConnectedProfile().getUsername();
         StorageSettings storageSettings = settingsService.getOrCreateSettings(owner);
         
         return settings.data("profile", auth.getConnectedProfile())
                        .data("settings", storageSettings)
-                       .data("section", "settings");
+                       .data("section", "settings")
+                       .data("success", success);
     }
 
     /**
@@ -102,7 +103,7 @@ public class SettingsResource {
         settingsService.save(storageSettings);
         LOGGER.log(Level.INFO, "Updated general settings for user: " + owner);
         
-        return Response.seeOther(java.net.URI.create("/api/settings?success=general")).build();
+        return Response.seeOther(java.net.URI.create("/settings?success=general")).build();
     }
 
     /**
@@ -131,7 +132,7 @@ public class SettingsResource {
         settingsService.updateBackendSettings(owner, "S3", enabled, credentials);
         LOGGER.log(Level.INFO, "Updated S3 settings for user: " + owner);
         
-        return Response.seeOther(java.net.URI.create("/api/settings?success=s3")).build();
+        return Response.seeOther(java.net.URI.create("/settings?success=s3")).build();
     }
 
     /**
@@ -158,7 +159,7 @@ public class SettingsResource {
         settingsService.updateBackendSettings(owner, "GOOGLE_DRIVE", enabled, credentials);
         LOGGER.log(Level.INFO, "Updated Google Drive settings for user: " + owner);
         
-        return Response.seeOther(java.net.URI.create("/api/settings?success=googledrive")).build();
+        return Response.seeOther(java.net.URI.create("/settings?success=googledrive")).build();
     }
 
     /**
@@ -187,7 +188,7 @@ public class SettingsResource {
         settingsService.updateBackendSettings(owner, "DROPBOX", enabled, credentials);
         LOGGER.log(Level.INFO, "Updated Dropbox settings for user: " + owner);
         
-        return Response.seeOther(java.net.URI.create("/api/settings?success=dropbox")).build();
+        return Response.seeOther(java.net.URI.create("/settings?success=dropbox")).build();
     }
 
     /**
@@ -216,7 +217,7 @@ public class SettingsResource {
         settingsService.updateBackendSettings(owner, "ONEDRIVE", enabled, credentials);
         LOGGER.log(Level.INFO, "Updated OneDrive settings for user: " + owner);
         
-        return Response.seeOther(java.net.URI.create("/api/settings?success=onedrive")).build();
+        return Response.seeOther(java.net.URI.create("/settings?success=onedrive")).build();
     }
 
     /**
@@ -241,7 +242,7 @@ public class SettingsResource {
         settingsService.updateBackendSettings(owner, "WEBDAV", enabled, credentials);
         LOGGER.log(Level.INFO, "Updated WebDAV settings for user: " + owner);
         
-        return Response.seeOther(java.net.URI.create("/api/settings?success=webdav")).build();
+        return Response.seeOther(java.net.URI.create("/settings?success=webdav")).build();
     }
 
     /**

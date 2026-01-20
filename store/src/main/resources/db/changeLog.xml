@@ -94,4 +94,12 @@
         </createIndex>
     </changeSet>
 
+    <changeSet id="5" author="abderrazak">
+        <comment>Add missing refresh token columns for Dropbox and OneDrive</comment>
+        <addColumn tableName="storage_settings">
+            <column name="dropbox_refresh_token" type="varchar(2000)"/>
+            <column name="onedrive_refresh_token" type="varchar(2000)"/>
+        </addColumn>
+    </changeSet>
+
 </databaseChangeLog>

@@ -120,7 +120,7 @@
                 </div>
             </div>
 
-            {#if io:vertx.core.MultiMap:from(request.queryParameters).contains("success")}
+            {#if success}
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 <em class="fas fa-check-circle mr-2"></em>
                 Paramètres sauvegardés avec succès !
