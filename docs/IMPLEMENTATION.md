@@ -1,7 +1,7 @@
 # MByte - Technical Implementation Guide
 ## Issue #20: External Storage Integration
 
-**Author:** Abderrazak SEGHIR  
+**Author:** Abderrazak SEGHIR - Bahaa Eddine BEKKOUCHE  
 **Date:** January 2026
 
 ---
