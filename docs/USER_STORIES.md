@@ -3,7 +3,7 @@
 
 **Issue #20: External Storage Integration (S3, WebDAV, etc.) with Ciphering**
 
-**Author:** Abderrazak SEGHIR  
+**Author:** Abderrazak SEGHIR - Bahaa Eddine BEKKOUCHE  
 **Date:** January 2026  
 **Version:** 25.1-SNAPSHOT
 
